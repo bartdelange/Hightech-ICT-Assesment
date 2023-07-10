@@ -10,8 +10,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.4.0",
     "enquirer": "^2.3.6",
+    "ora": "^3.4.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
+  },
+  "devDependencies": {
+    "@types/ora": "^3.2.0"
   }
 }
