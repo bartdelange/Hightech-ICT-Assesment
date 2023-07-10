@@ -2,6 +2,7 @@ import Enquirer from "Enquirer";
 import ora from "ora";
 import { MazeApiService } from "./services/maze-api.service";
 import { MazeInfo } from "./models/maze-info.model";
+import { MazeRunnerService } from "./services/maze-runner.service";
 
 enum MainMenuItem {
   Play = "play",
@@ -27,12 +28,15 @@ export class App {
   private _playerName?: string;
   private _mazeName?: string;
 
+  private _mazeRunner?: MazeRunnerService;
+
   constructor(private _apiService: MazeApiService) {}
 
   public async appLoop(): Promise<void> {
     while (true) {
       if (!this._playerName) {
         this._playerName = await this._askPlayerName();
+        this._apiService.registerPlayer(this._playerName);
       }
 
       switch (this._gameState) {
@@ -42,8 +46,10 @@ export class App {
           if (option == MainMenuItem.Play) {
             this._gameState = State.PickingMaze;
           } else if (option == MainMenuItem.ResetPlayer) {
+            this._apiService.resetPlayer();
             this._playerName = undefined;
           } else {
+            this._apiService.resetPlayer();
             console.log("👋 Okay bye!");
             process.exit(0);
           }
@@ -51,17 +57,23 @@ export class App {
         case State.PickingMaze:
           this._mazeName = await this._pickMaze();
           if (this._mazeName != "") {
+            this._mazeRunner = new MazeRunnerService(
+              await this._apiService.enterMaze(this._mazeName!)
+            );
             this._gameState = State.PlayingMaze;
           }
           break;
         case State.PlayingMaze:
-          const spinner = ora("Solving the maze").start();
-          await new Promise((resolve) => {
-            setTimeout(resolve, 5000);
-          });
-          spinner.stop();
-          console.log("✔ Done solving, results below");
-          this._gameState = State.OnMainMenu;
+          if (this._mazeName != "") {
+            const spinner = ora(`Solving ${this._mazeName}`).start();
+
+            await this._mazeRunner!.solve();
+
+            spinner.stop();
+            console.log("✔ Done solving, results below");
+
+            this._gameState = State.OnMainMenu;
+          }
           break;
       }
     }

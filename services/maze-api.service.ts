@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import { PlayerInfo } from "../models/player-info.model";
 import { MazeInfo } from "../models/maze-info.model";
 import { PossibleActionsAndCurrentScore } from "../models/possible-actions-and-current-score.model";
+import { Direction } from "../enums/direction.enum";
 
 export class MazeApiService {
   private _client: AxiosInstance = axios.create({
@@ -31,9 +32,42 @@ export class MazeApiService {
 
   public async enterMaze(
     mazeName: string
-  ): Promise<PossibleActionsAndCurrentScore[]> {
+  ): Promise<PossibleActionsAndCurrentScore> {
     return await this._client
       .post("mazes/enter", { mazeName })
       .then((resp) => resp.data);
+  }
+
+  // Inside the maze
+  public async possibleMazeActions(): Promise<PossibleActionsAndCurrentScore> {
+    return await this._client
+      .get("maze/possibleActions")
+      .then((resp) => resp.data);
+  }
+
+  public async moveInMaze(
+    direction: Direction
+  ): Promise<PossibleActionsAndCurrentScore> {
+    return await this._client
+      .post("maze/move", { direction })
+      .then((resp) => resp.data);
+  }
+
+  public async tagMazeTile(
+    tagValue: number
+  ): Promise<PossibleActionsAndCurrentScore> {
+    return await this._client
+      .post("maze/tag", { tagValue })
+      .then((resp) => resp.data);
+  }
+
+  public async collectScoreOnTile(): Promise<PossibleActionsAndCurrentScore> {
+    return await this._client
+      .post("maze/collectScore")
+      .then((resp) => resp.data);
+  }
+
+  public async exitMaze(): Promise<void> {
+    await this._client.post("maze/exit");
   }
 }
