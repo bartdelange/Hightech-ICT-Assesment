@@ -3,9 +3,11 @@ import ora from "ora";
 import { MazeApiService } from "./services/maze-api.service";
 import { MazeInfo } from "./models/maze-info.model";
 import { MazeRunnerService } from "./services/maze-runner.service";
+import { PlayerInfo } from "./models/player-info.model";
 
 enum MainMenuItem {
   Play = "play",
+  PlayerInfo = "playerInfo",
   ResetPlayer = "resetPlayer",
   Exit = "exit",
 }
@@ -25,7 +27,7 @@ export class App {
     resetProgress: boolean;
   }>();
   private _gameState: State = State.OnMainMenu;
-  private _playerName?: string;
+  private _playerInfo?: PlayerInfo;
   private _mazeName?: string;
 
   private _mazeRunner?: MazeRunnerService;
@@ -34,9 +36,19 @@ export class App {
 
   public async appLoop(): Promise<void> {
     while (true) {
-      if (!this._playerName) {
-        this._playerName = await this._askPlayerName();
-        this._apiService.registerPlayer(this._playerName);
+      if (!this._playerInfo) {
+        try {
+          this._playerInfo = await this._apiService.playerInfo();
+          console.log("gottem");
+        } catch {
+          await this._apiService.registerPlayer(await this._askPlayerName());
+          this._playerInfo = await this._apiService.playerInfo();
+        }
+
+        if (this._playerInfo.isInMaze) {
+          this._mazeName = this._playerInfo.maze;
+          await this._playMaze();
+        }
       }
 
       switch (this._gameState) {
@@ -47,9 +59,11 @@ export class App {
             this._gameState = State.PickingMaze;
           } else if (option == MainMenuItem.ResetPlayer) {
             this._apiService.resetPlayer();
-            this._playerName = undefined;
+            this._playerInfo = undefined;
+          } else if (option == MainMenuItem.PlayerInfo) {
+            this._playerInfo = await this._apiService.playerInfo();
+            console.dir(this._playerInfo);
           } else {
-            this._apiService.resetPlayer();
             console.log("👋 Okay bye!");
             process.exit(0);
           }
@@ -57,10 +71,8 @@ export class App {
         case State.PickingMaze:
           this._mazeName = await this._pickMaze();
           if (this._mazeName != "") {
-            this._mazeRunner = new MazeRunnerService(
-              await this._apiService.enterMaze(this._mazeName!)
-            );
-            this._gameState = State.PlayingMaze;
+            await this._apiService.enterMaze(this._mazeName);
+            await this._playMaze();
           }
           break;
         case State.PlayingMaze:
@@ -79,6 +91,13 @@ export class App {
     }
   }
 
+  private async _playMaze() {
+    this._mazeRunner = new MazeRunnerService(
+      await this._apiService.possibleMazeActions()
+    );
+    this._gameState = State.PlayingMaze;
+  }
+
   private async _askPlayerName(): Promise<string> {
     const { playerName } = await this._enquirer.prompt({
       type: "input",
@@ -93,7 +112,7 @@ export class App {
     const { mainMenu } = await this._enquirer.prompt({
       type: "select",
       name: "mainMenu",
-      message: `Hello ${this._playerName}! What would you like to do`,
+      message: `Hello ${this._playerInfo?.name}! What would you like to do`,
       choices: [
         { name: "Play", message: "Play", value: MainMenuItem.Play },
         {
@@ -101,6 +120,11 @@ export class App {
           message: "Reset Player",
           value: MainMenuItem.ResetPlayer,
           hint: "This will reset all your progress and sign you out",
+        },
+        {
+          name: "Player Info",
+          message: "Player Info",
+          value: MainMenuItem.PlayerInfo,
         },
         { name: "Exit", message: "Exit", value: MainMenuItem.Exit },
       ],
@@ -117,7 +141,7 @@ export class App {
     const mazes: MazeInfo[] = await this._apiService.getAllMazes();
 
     if (!mazes.length) {
-      console.log("❌ It appears we did not find a single maze to play!");
+      console.log("✖ It appears we did not find a single maze to play!");
       this._gameState = State.OnMainMenu;
       return "";
     }

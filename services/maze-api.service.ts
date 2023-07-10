@@ -12,13 +12,15 @@ export class MazeApiService {
 
   // Player logic
   public async registerPlayer(playerName: string): Promise<void> {
-    return await this._client.post("player/register", {
-      name: playerName,
+    return await this._client.post("player/register", null, {
+      params: {
+        name: playerName,
+      },
     });
   }
 
   public async playerInfo(): Promise<PlayerInfo> {
-    return await this._client.get("player");
+    return await this._client.get("player").then((resp) => resp.data);
   }
 
   public async resetPlayer(): Promise<void> {
@@ -34,7 +36,7 @@ export class MazeApiService {
     mazeName: string
   ): Promise<PossibleActionsAndCurrentScore> {
     return await this._client
-      .post("mazes/enter", { mazeName })
+      .post("mazes/enter", null, { params: { mazeName } })
       .then((resp) => resp.data);
   }
 
@@ -49,7 +51,7 @@ export class MazeApiService {
     direction: Direction
   ): Promise<PossibleActionsAndCurrentScore> {
     return await this._client
-      .post("maze/move", { direction })
+      .post("maze/move", null, { params: { direction } })
       .then((resp) => resp.data);
   }
 
@@ -57,7 +59,7 @@ export class MazeApiService {
     tagValue: number
   ): Promise<PossibleActionsAndCurrentScore> {
     return await this._client
-      .post("maze/tag", { tagValue })
+      .post("maze/tag", null, { params: { tagValue } })
       .then((resp) => resp.data);
   }
 
