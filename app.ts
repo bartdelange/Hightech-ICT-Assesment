@@ -26,9 +26,12 @@ export class App {
     maze: string;
     resetProgress: boolean;
   }>();
+  private _mazes: MazeInfo[] = [];
+  private _mazesPlayed: string[] = [];
   private _gameState: State = State.OnMainMenu;
   private _playerInfo?: PlayerInfo;
   private _mazeName?: string;
+  private _possibleScoreGained = 0;
 
   private _mazeRunner?: MazeRunnerService;
 
@@ -39,15 +42,13 @@ export class App {
       if (!this._playerInfo) {
         try {
           this._playerInfo = await this._apiService.playerInfo();
-          console.log("gottem");
         } catch {
           await this._apiService.registerPlayer(await this._askPlayerName());
           this._playerInfo = await this._apiService.playerInfo();
         }
 
         if (this._playerInfo.isInMaze) {
-          this._mazeName = this._playerInfo.maze;
-          await this._playMaze();
+          this._apiService.resetPlayer();
         }
       }
 
@@ -57,12 +58,18 @@ export class App {
 
           if (option == MainMenuItem.Play) {
             this._gameState = State.PickingMaze;
-          } else if (option == MainMenuItem.ResetPlayer) {
-            this._apiService.resetPlayer();
-            this._playerInfo = undefined;
           } else if (option == MainMenuItem.PlayerInfo) {
             this._playerInfo = await this._apiService.playerInfo();
-            console.dir(this._playerInfo);
+            console.log(
+              `› ${this._playerInfo.name} has earned ${
+                this._playerInfo.playerScore
+              } out of ${this._possibleScoreGained} points and ${
+                this._playerInfo.hasFoundEasterEgg ? "has" : "has not"
+              } found the easter egg`
+            );
+          } else if (option == MainMenuItem.ResetPlayer) {
+            await this._apiService.resetPlayer();
+            this._playerInfo = undefined;
           } else {
             console.log("👋 Okay bye!");
             process.exit(0);
@@ -71,7 +78,11 @@ export class App {
         case State.PickingMaze:
           this._mazeName = await this._pickMaze();
           if (this._mazeName != "") {
+            this._possibleScoreGained +=
+              this._mazes.find((maze) => maze.name === this._mazeName)
+                ?.potentialReward ?? 0;
             await this._apiService.enterMaze(this._mazeName);
+            this._mazesPlayed.push(this._mazeName);
             await this._playMaze();
           }
           break;
@@ -93,6 +104,7 @@ export class App {
 
   private async _playMaze() {
     this._mazeRunner = new MazeRunnerService(
+      this._apiService,
       await this._apiService.possibleMazeActions()
     );
     this._gameState = State.PlayingMaze;
@@ -109,6 +121,8 @@ export class App {
   }
 
   private async _runMainMenu(): Promise<MainMenuItem> {
+    this._mazes = await this._apiService.getAllMazes();
+
     const { mainMenu } = await this._enquirer.prompt({
       type: "select",
       name: "mainMenu",
@@ -116,15 +130,15 @@ export class App {
       choices: [
         { name: "Play", message: "Play", value: MainMenuItem.Play },
         {
+          name: "Player Info",
+          message: "Player Info",
+          value: MainMenuItem.PlayerInfo,
+        },
+        {
           name: "Reset Player",
           message: "Reset Player",
           value: MainMenuItem.ResetPlayer,
           hint: "This will reset all your progress and sign you out",
-        },
-        {
-          name: "Player Info",
-          message: "Player Info",
-          value: MainMenuItem.PlayerInfo,
         },
         { name: "Exit", message: "Exit", value: MainMenuItem.Exit },
       ],
@@ -138,9 +152,7 @@ export class App {
   }
 
   private async _pickMaze(): Promise<string> {
-    const mazes: MazeInfo[] = await this._apiService.getAllMazes();
-
-    if (!mazes.length) {
+    if (!this._mazes.length) {
       console.log("✖ It appears we did not find a single maze to play!");
       this._gameState = State.OnMainMenu;
       return "";
@@ -150,10 +162,12 @@ export class App {
       type: "autocomplete",
       name: "maze",
       message: `Alright! Pick a maze to start`,
-      choices: mazes.map((maze) => ({
-        name: maze.name,
-        hint: `Reward: ${maze.potentialReward}, Tiles: ${maze.totalTiles}`,
-      })),
+      choices: this._mazes
+        .filter((maze) => !this._mazesPlayed.includes(maze.name))
+        .map((maze) => ({
+          name: maze.name,
+          hint: `Reward: ${maze.potentialReward}, Tiles: ${maze.totalTiles}`,
+        })),
     });
 
     return maze;
