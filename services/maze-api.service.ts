@@ -63,7 +63,7 @@ export class MazeApiService {
       .then((resp) => resp.data);
   }
 
-  public async collectScoreOnTile(): Promise<PossibleActionsAndCurrentScore> {
+  public async storeScoreToBag(): Promise<PossibleActionsAndCurrentScore> {
     return await this._client
       .post("maze/collectScore")
       .then((resp) => resp.data);
