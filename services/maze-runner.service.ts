@@ -88,6 +88,11 @@ export class MazeRunnerService {
       this._currentTagWeight
     );
 
+    // This is by no means the quickest way, since we basically brute force the maze. But it is a points collecting machine
+    // The next version should also check if we already found al the points (in case of the needle maze) and then scour for a collection point and then for the exit
+    // I don't see another aproach then the above since we "don't" know the maze beforehand
+    // You could cheat by running it once, resetting your user and then using the previous runs as a guide using something like a*. But I wan't to play by the "rules"
+
     // Walk until we have stepped on all tiles
     while (!this._allTilesVisited) {
       const nextMove = this._getBestNextMove();
