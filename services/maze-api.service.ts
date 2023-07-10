@@ -3,11 +3,12 @@ import { PlayerInfo } from "../models/player-info.model";
 import { MazeInfo } from "../models/maze-info.model";
 import { PossibleActionsAndCurrentScore } from "../models/possible-actions-and-current-score.model";
 import { Direction } from "../enums/direction.enum";
+import config from "../.config.json";
 
 export class MazeApiService {
   private _client: AxiosInstance = axios.create({
     baseURL: "https://maze.hightechict.nl/api/",
-    headers: { Authorization: "HTI Thanks You [7K0]" },
+    headers: { Authorization: config.token },
   });
 
   // Player logic

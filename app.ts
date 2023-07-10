@@ -4,19 +4,8 @@ import { MazeApiService } from "./services/maze-api.service";
 import { MazeInfo } from "./models/maze-info.model";
 import { MazeRunnerService } from "./services/maze-runner.service";
 import { PlayerInfo } from "./models/player-info.model";
-
-enum MainMenuItem {
-  Play = "play",
-  PlayerInfo = "playerInfo",
-  ResetPlayer = "resetPlayer",
-  Exit = "exit",
-}
-
-enum State {
-  OnMainMenu,
-  PickingMaze,
-  PlayingMaze,
-}
+import { State } from "./enums/state.enum";
+import { MainMenuItem } from "./enums/main-menu-item.enum";
 
 export class App {
   private _enquirer = new Enquirer<{

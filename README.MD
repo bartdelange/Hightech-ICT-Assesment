@@ -7,11 +7,12 @@
 
 ## Setup
 
-Start by installing it all: `npm i`
+- Start by installing it all: `npm i`
+- Add a .config.json file containing the follwing: `{ "token": "HTI Thanks You [????]" }`
 
 ## Running the game
 
-To run the game simply run: `npm start`
+- To run the game simply run: `npm start`
 
 ## The app
 
